@@ -1,7 +1,8 @@
 {
-  "name": "flowsend-demo",
+  "name": "flowsend",
   "version": "1.0.0",
   "private": true,
+  "description": "FlowSend wallet dashboard",
   "scripts": {
     "start": "node server.js"
   },

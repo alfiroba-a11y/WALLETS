@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowSend Demo</title>
+  <style>
+    :root{
+      --yellow:#ffca28; --black:#171817; --cream:#f7f7f3;
+      --line:#e6e7e1; --muted:#747773; --green:#16845c; --red:#cb5c44;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--cream);color:var(--black);font-family:Arial,sans-serif}
+    button,input,select{font:inherit}
+    .login{position:fixed;inset:0;z-index:10;display:grid;grid-template-columns:45% 55%;background:#fafaf7}
+    .login.hidden{display:none}
+    .login-left{padding:10vh 11%;display:flex;flex-direction:column;justify-content:center}
+    .login-right{background:var(--yellow);position:relative;overflow:hidden;display:flex;align-items:end;padding:12%}
+    .login-right:before,.login-right:after{content:"";position:absolute;border:1px solid #fff9;border-radius:50%}
+    .login-right:before{height:500px;width:500px;top:8%;right:-90px}
+    .login-right:after{height:320px;width:320px;top:38%;right:25%}
+    .login-right h2{font-size:42px;line-height:1.1;z-index:1;margin:0}
+    .brand{font-size:23px;font-weight:800;margin-bottom:45px}
+    .brand i{background:var(--yellow);padding:5px 9px;border-radius:7px;font-style:normal;margin-right:7px}
+    h1{font-size:37px;margin:5px 0 10px}
+    .muted{color:var(--muted);line-height:1.5}
+    .login label,.field label{display:block;font-size:12px;font-weight:bold;margin:15px 0 7px}
+    input,select{width:100%;padding:12px;border:1px solid #dadbd4;border-radius:8px;background:#fff}
+    .primary{border:0;background:var(--yellow);padding:13px 18px;border-radius:8px;font-weight:bold;cursor:pointer}
+    .login .primary{width:100%;margin-top:18px}
+    .login small{display:block;margin-top:17px;color:var(--muted);font-size:10px}
+
+    .app{display:flex;min-height:100vh}
+    aside{position:fixed;inset:0 auto 0 0;width:230px;background:var(--black);color:#fff;padding:30px 18px}
+    aside .brand{font-size:20px}
+    nav{display:grid;gap:7px}
+    nav button{border:0;color:#aaa;background:transparent;text-align:left;padding:13px;border-radius:8px;cursor:pointer;font-weight:bold}
+    nav button.active,nav button:hover{background:#30312e;color:#fff}
+    .demo{position:absolute;bottom:25px;left:30px;color:#aaa;font-size:11px}
+    .demo b{display:inline-block;background:var(--yellow);color:#222;padding:4px 6px;border-radius:4px;font-size:10px}
+    main{width:calc(100% - 230px);margin-left:230px;padding:0 7% 50px}
+    header{height:100px;display:flex;justify-content:space-between;align-items:center}
+    header p{font-size:10px;letter-spacing:1px;color:var(--muted);font-weight:bold;margin:0 0 6px}
+    header h2{margin:0;font-size:20px}
+    .avatar{width:38px;height:38px;background:#dcebe2;border-radius:50%;display:grid;place-items:center;color:#176545;font-size:11px;font-weight:bold}
+    .view{display:none}.view.active{display:block}
+    .balance{border-radius:18px;background:var(--yellow);min-height:220px;padding:35px;position:relative;overflow:hidden}
+    .balance:before{content:"";position:absolute;width:350px;height:350px;border:1px solid #fff9;border-radius:50%;right:-50px;top:-100px}
+    .balance p{font-size:11px;font-weight:bold;letter-spacing:1px;margin:0}
+    .balance h1{font-size:43px;margin:10px 0}
+    .balance small{font-size:13px}
+    .balance button{position:absolute;right:30px;top:35px;background:#171817;color:#fff;border:0;border-radius:7px;padding:12px 15px;font-weight:bold;cursor:pointer}
+    .heading{display:flex;justify-content:space-between;align-items:end;margin:34px 0 15px}
+    .heading p{margin:0 0 5px;color:var(--muted);font-size:10px;letter-spacing:1px;font-weight:bold}
+    .heading h3{margin:0;font-size:20px}
+    .text{border:0;background:none;color:#147550;font-weight:bold;cursor:pointer}
+    .actions{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+    .action{min-height:145px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;cursor:pointer}
+    .action.dark{background:var(--black);color:#fff;border:0}
+    .action b{display:block;font-size:16px;margin-top:17px}
+    .action small{display:block;color:var(--muted);margin-top:5px}
+    .action.dark small{color:#c7c7c3}
+    .icon{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:#fff1c4;color:#966900;font-size:20px}
+    .dark .icon{background:var(--yellow);color:#222}
+    .list,.card-box,.settings{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+    .tx{display:flex;align-items:center;gap:13px;padding:17px 20px;border-bottom:1px solid var(--line)}
+    .tx:last-child{border:0}
+    .tx-icon{width:39px;height:39px;border-radius:50%;display:grid;place-items:center;background:#eaf5ee;color:var(--green);font-size:18px}
+    .tx-icon.send{background:#fff0ed;color:var(--red)}
+    .tx-info{flex:1}.tx-info b{display:block;font-size:14px}.tx-info span,.amount small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+    .amount{text-align:right;font-size:14px;font-weight:bold}
+    .page-title{padding:15px 0}.page-title h1{margin:5px 0;font-size:31px}.page-title p{margin:0;color:var(--muted)}
+    .card-box{margin-top:25px;padding:25px;display:flex;gap:25px;align-items:center}
+    .credit-card{width:290px;height:180px;border-radius:15px;background:#21221f;color:#fff;padding:22px;box-shadow:0 10px 22px #0003}
+    .credit-card b{color:var(--yellow);font-size:18px}.chip{width:33px;height:23px;background:#d9b554;border-radius:4px;margin:25px 0 14px}.number{letter-spacing:2px;font-family:monospace;font-size:16px}
+    .settings{margin-top:25px;padding:25px;max-width:600px}.settings p{color:var(--muted);font-size:13px}.green{color:var(--green);font-weight:bold}
+    .modal-bg{position:fixed;inset:0;background:#0008;z-index:20;display:none}.modal-bg.open{display:block}
+    .modal{position:fixed;z-index:21;width:min(500px,calc(100% - 30px));left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:16px;padding:30px;display:none}.modal.open{display:block}
+    .modal h2{margin:0 0 8px}.close{position:absolute;right:16px;top:10px;font-size:28px;border:0;background:none;cursor:pointer}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}
+    .convert{margin-top:18px;background:#f5f5f0;padding:12px;border-radius:8px;font-size:13px}
+    .receipt{text-align:center}.check{width:62px;height:62px;margin:0 auto 15px;display:grid;place-items:center;border-radius:50%;background:#e4f5ec;color:var(--green);font-size:29px}.receipt-box{text-align:left;background:#f7f7f3;padding:14px;border-radius:9px;margin-top:18px}.receipt-box div{display:flex;justify-content:space-between;padding:7px;font-size:13px}.receipt-box span{color:var(--muted)}
+    .toast{position:fixed;right:24px;bottom:24px;background:#1c1d1b;color:#fff;padding:15px 19px;border-radius:9px;display:none;z-index:30}.toast.show{display:block}
+    @media(max-width:750px){aside{display:none}main{margin:0;width:100%;padding:0 18px}.login{grid-template-columns:1fr}.login-right{display:none}.actions{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.card-box{display:block}.credit-card{margin-bottom:20px}.balance button{display:none}}
+  </style>
+</head>
+<body>
+  <section class="login" id="login">
+    <div class="login-left">
+      <div class="brand"><i>F</i>flow<span style="color:#b98700">send</span></div>
+      <p style="font-size:10px;letter-spacing:1px;font-weight:bold;color:#777">WELCOME TO FLOWSEND</p>
+      <h1>Money moves better.</h1>
+      <p class="muted">Sign in to your simulated USD wallet and explore the demo.</p>
+      <form id="loginForm">
+        <label>Email address</label><input type="email" value="alex.morgan@example.com" required>
+        <label>Password</label><input type="password" value="demoaccess" required>
+        <button class="primary">Sign in to demo</button>
+      </form>
+      <small>This is a fictional interface. No real money or card details are used.</small>
+    </div>
+    <div class="login-right"><h2>Fast, clear<br><span style="color:white">and made for moving.</span></h2></div>
+  </section>
+
+  <div class="app">
+    <aside>
+      <div class="brand"><i>F</i>flow<span style="color:var(--yellow)">send</span></div>
+      <nav>
+        <button class="active" data-view="dashboard">▦ &nbsp; Dashboard</button>
+        <button data-view="activity">◷ &nbsp; Activity</button>
+        <button data-view="cards">▣ &nbsp; Payment methods</button>
+        <button data-view="settings">⚙ &nbsp; Settings</button>
+      </nav>
+      <div class="demo"><b>DEMO MODE</b><p>All money and cards are simulated.</p></div>
+    </aside>
+
+    <main>
+      <header>
+        <div><p>GOOD MORNING</p><h2 id="headerTitle">Welcome back, Alex</h2></div>
+        <div class="avatar">AM</div>
+      </header>
+
+      <section id="dashboard" class="view active">
+        <div class="balance">
+          <p>AVAILABLE BALANCE</p>
+          <h1 id="balance">$2,450.00</h1>
+          <small>USD Wallet · •••• 1942</small>
+          <button onclick="openTopup()">+ Add money</button>
+        </div>
+
+        <div class="heading"><div><p>QUICK ACTIONS</p><h3>What would you like to do?</h3></div></div>
+        <div class="actions">
+          <button class="action dark" onclick="openSend()"><span class="icon">↗</span><b>Send money</b><small>To anyone, anywhere</small></button>
+          <button class="action" onclick="openTopup()"><span class="icon">+</span><b>Top up account</b><small>Add USD to your wallet</small></button>
+          <button class="action" onclick="openWithdraw()"><span class="icon">↓</span><b>Withdraw</b><small>Move money to a card</small></button>
+        </div>
+
+        <div class="heading"><div><p>RECENT ACTIVITY</p><h3>Transaction history</h3></div><button class="text" data-view="activity">View all →</button></div>
+        <div class="list" id="recentList"></div>
+      </section>
+
+      <section id="activity" class="view">
+        <div class="page-title"><p>YOUR MONEY</p><h1>Activity</h1><p>Every simulated wallet movement in one place.</p></div>
+        <div class="list" id="activityList"></div>
+      </section>
+
+      <section id="cards" class="view">
+        <div class="page-title"><p>PAYMENT METHODS</p><h1>Your cards</h1><p>Save a demo card to top up or withdraw.</p></div>
+        <div id="cardsContent"></div>
+      </section>
+
+      <section id="settings" class="view">
+        <div class="page-title"><p>ACCOUNT</p><h1>Settings</h1><p>Manage profile and payment preferences.</p></div>
+        <div class="settings">
+          <h3>Linked card</h3>
+          <p id="linkedStatus">No card linked.</p>
+          <button class="primary" onclick="openCard()">Manage demo card</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-bg" id="modalBg"></div>
+  <div class="modal" id="modal"><button class="close" onclick="closeModal()">×</button><div id="modalContent"></div></div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const storageKey = "flowsendDemo";
+    const rates = {
+      Kenya: ["KES", 129.35], Nigeria: ["NGN", 1540], Ghana: ["GHS", 15.6],
+      Tanzania: ["TZS", 2555], Uganda: ["UGX", 3715], India: ["INR", 83.2],
+      Philippines: ["PHP", 56.1], Canada: ["CAD", 1.36], Mexico: ["MXN", 17.1],
+      "United Kingdom": ["GBP", 0.79]
+    };
+
+    let state = JSON.parse(localStorage.getItem(storageKey)) || {
+      balance: 2450,
+      card: null,
+      history: [
+        {type:"send", name:"Maya K. · •••• 8842", detail:"Sent to Kenya · KES 16,945.00", amount:-131, date:"Today, 09:42"},
+        {type:"topup", name:"Wallet top up", detail:"From Visa · •••• 1942", amount:500, date:"Yesterday, 14:22"},
+        {type:"send", name:"Ade T. · •••• 2189", detail:"Sent to Nigeria · NGN 115,500.00", amount:-75, date:"Aug 28, 2026"}
+      ]
+    };
+
+    const $ = id => document.getElementById(id);
+    const usd = number => new Intl.NumberFormat("en-US", {style:"currency", currency:"USD"}).format(number);
+    const save = () => { localStorage.setItem(storageKey, JSON.stringify(state)); render(); };
+
+    function showToast(text) {
+      $("toast").textContent = "✓  " + text;
+      $("toast").classList.add("show");
+      setTimeout(() => $("toast").classList.remove("show"), 3000);
+    }
+
+    function renderHistory() {
+      const html = state.history.map(item => `
+        <div class="tx">
+          <div class="tx-icon ${item.type === "send" ? "send" : ""}">${item.type === "send" ? "↗" : item.type === "topup" ? "+" : "↓"}</div>
+          <div class="tx-info"><b>${item.name}</b><span>${item.detail}</span></div>
+          <div class="amount">${item.amount > 0 ? "+" : ""}${usd(item.amount)}<small>${item.date}</small></div>
+        </div>
+      `).join("");
+      $("activityList").innerHTML = html;
+      $("recentList").innerHTML = state.history.slice(0, 4).map(item => `
+        <div class="tx">
+          <div class="tx-icon ${item.type === "send" ? "send" : ""}">${item.type === "send" ? "↗" : item.type === "topup" ? "+" : "↓"}</div>
+          <div class="tx-info"><b>${item.name}</b><span>${item.detail}</span></div>
+          <div class="amount">${item.amount > 0 ? "+" : ""}${usd(item.amount)}<small>${item.date}</small></div>
+        </div>
+      `).join("");
+    }
+
+    function render() {
+      $("balance").textContent = usd(state.balance);
+      renderHistory();
+      $("linkedStatus").innerHTML = state.card
+        ? `<span class="green">● Card linked and verified</span><br>${state.card.brand} · •••• ${state.card.last4} · ${state.card.name}`
+        : "No card linked. Add one to enable wallet top-ups and withdrawals.";
+
+      $("cardsContent").innerHTML = state.card ? `
+        <div class="card-box">
+          <div class="credit-card"><b>flowsend</b><div class="chip"></div><div class="number">•••• •••• •••• ${state.card.last4}</div><small>${state.card.name.toUpperCase()}</small></div>
+          <div><h2>${state.card.brand} ending in ${state.card.last4}</h2><p class="muted">This demo card is saved and ready to use.</p><button class="primary" onclick="openCard()">Edit card details</button></div>
+        </div>` : `
+        <div class="card-box"><div><h2>No saved card</h2><p class="muted">Add a fake card for demo top-ups and withdrawals.</p><button class="primary" onclick="openCard()">Add demo card</button></div></div>`;
+    }
+
+    function openModal(content) {
+      $("modalContent").innerHTML = content;
+      $("modal").classList.add("open");
+      $("modalBg").classList.add("open");
+    }
+
+    function closeModal() {
+      $("modal").classList.remove("open");
+      $("modalBg").classList.remove("open");
+    }
+
+    function openCard() {
+      openModal(`
+        <h2>${state.card ? "Edit" : "Add"} demo card</h2>
+        <p class="muted">Use any made-up details. This app never charges a card.</p>
+        <form id="cardForm">
+          <div class="field"><label>Name on card</label><input name="name" required value="${state.card?.name || ""}" placeholder="Alex Morgan"></div>
+          <div class="field"><label>Card number</label><input name="number" required placeholder="4242 4242 4242 4242"></div>
+          <div class="field"><label>Card type</label><select name="brand"><option>Visa</option><option>Mastercard</option><option>American Express</option></select></div>
+          <button class="primary" style="width:100%;margin-top:20px">Save demo card</button>
+        </form>
+      `);
+      $("cardForm").onsubmit = event => {
+        event.preventDefault();
+        const data = new FormData(event.target);
+        const digits = data.get("number").replace(/\D/g, "");
+        state.card = { name:data.get("name"), brand:data.get("brand"), last4:(digits.slice(-4) || "0000") };
+        save(); closeModal(); showToast("Demo card saved successfully");
+      };
+    }
+
+    function openTopup() {
+      if (!state.card) return openCard();
+      openModal(`
+        <h2>Top up your account</h2>
+        <p class="muted">Add USD from ${state.card.brand} · •••• ${state.card.last4}.</p>
+        <form id="topupForm">
+          <div class="field"><label>Amount in USD</label><input name="amount" type="number" min="1" step="0.01" required placeholder="0.00"></div>
+          <button class="primary" style="width:100%;margin-top:20px">Add money</button>
+        </form>
+      `);
+      $("topupForm").onsubmit = event => {
+        event.preventDefault();
+        const amount = Number(new FormData(event.target).get("amount"));
+        state.balance += amount;
+        state.history.unshift({type:"topup", name:"Wallet top up", detail:`From ${state.card.brand} · •••• ${state.card.last4}`, amount, date:"Just now"});
+        save(); closeModal(); showToast(`${usd(amount)} added to your USD wallet`);
+      };
+    }
+
+    function openWithdraw() {
+      if (!state.card) return openCard();
+      openModal(`
+        <h2>Withdraw to card</h2>
+        <p class="muted">Move USD to ${state.card.brand} · •••• ${state.card.last4}.</p>
+        <form id="withdrawForm">
+          <div class="field"><label>Amount in USD</label><input name="amount" type="number" min="1" step="0.01" required placeholder="0.00"></div>
+          <button class="primary" style="width:100%;margin-top:20px">Withdraw funds</button>
+        </form>
+      `);
+      $("withdrawForm").onsubmit = event => {
+        event.preventDefault();
+        const amount = Number(new FormData(event.target).get("amount"));
+        if (amount > state.balance) return showToast("Insufficient demo balance");
+        state.balance -= amount;
+        state.history.unshift({type:"withdraw", name:"Withdrawal to card", detail:`To ${state.card.brand} · •••• ${state.card.last4}`, amount:-amount, date:"Just now"});
+        save(); closeModal(); showToast(`${usd(amount)} sent to your card`);
+      };
+    }
+
+    function openSend() {
+      const countries = Object.keys(rates).map(country => `<option>${country}</option>`).join("");
+      openModal(`
+        <h2>Send money</h2>
+        <p class="muted">The receiver gets their local currency automatically.</p>
+        <form id="sendForm">
+          <div class="form-grid">
+            <div class="field full"><label>Receiver's full name</label><input name="name" required placeholder="Amina Wanjiku"></div>
+            <div class="field"><label>Phone number</label><input name="phone" required placeholder="+254 712 345 678"></div>
+            <div class="field"><label>Country</label><select name="country" id="country">${countries}</select></div>
+            <div class="field full"><label>Amount to send in USD</label><input name="amount" id="sendAmount" type="number" min="1" step="0.01" required placeholder="0.00"></div>
+          </div>
+          <div class="convert" id="conversion">Enter an amount to see the converted amount.</div>
+          <button class="primary" style="width:100%;margin-top:20px">Send money</button>
+        </form>
+      `);
+
+      const updateConversion = () => {
+        const amount = Number($("sendAmount").value || 0);
+        const country = $("country").value;
+        const [currency, rate] = rates[country];
+        $("conversion").innerHTML = amount
+          ? `You send <b>${usd(amount)}</b> · Receiver gets <b>${new Intl.NumberFormat("en-US",{style:"currency",currency}).format(amount * rate)}</b>`
+          : "Enter an amount to see the converted amount.";
+      };
+
+      $("sendAmount").oninput = updateConversion;
+      $("country").onchange = updateConversion;
+
+      $("sendForm").onsubmit = event => {
+        event.preventDefault();
+        const data = new FormData(event.target);
+        const amount = Number(data.get("amount"));
+        const country = data.get("country");
+        const [currency, rate] = rates[country];
+
+        if (amount > state.balance) return showToast("Insufficient demo balance");
+
+        const phone = data.get("phone").replace(/\D/g, "");
+        const masked = phone.length > 4 ? phone.slice(0,2) + "••••" + phone.slice(-2) : "••••";
+        const received = new Intl.NumberFormat("en-US", {style:"currency", currency}).format(amount * rate);
+
+        state.balance -= amount;
+        state.history.unshift({
+          type:"send",
+          name:`${data.get("name")} · ${masked}`,
+          detail:`Sent to ${country} · ${received}`,
+          amount:-amount,
+          date:"Just now"
+        });
+
+        save();
+        openModal(`
+          <div class="receipt">
+            <div class="check">✓</div>
+            <h2>Money sent successfully</h2>
+            <p class="muted">${usd(amount)} is on its way.</p>
+            <div class="receipt-box">
+              <div><span>Receiver</span><b>${data.get("name")}</b></div>
+              <div><span>Phone</span><b>${masked}</b></div>
+              <div><span>They receive</span><b>${received}</b></div>
+            </div>
+            <button class="primary" style="width:100%;margin-top:20px" onclick="closeModal()">Done</button>
+          </div>
+        `);
+      };
+    }
+
+    document.querySelectorAll("[data-view]").forEach(button => {
+      button.onclick = () => {
+        const view = button.dataset.view;
+        document.querySelectorAll(".view").forEach(item => item.classList.toggle("active", item.id === view));
+        document.querySelectorAll("nav button").forEach(item => item.classList.toggle("active", item.dataset.view === view));
+        $("headerTitle").textContent = view === "dashboard" ? "Welcome back, Alex" : view[0].toUpperCase() + view.slice(1);
+      };
+    });
+
+    $("loginForm").onsubmit = event => {
+      event.preventDefault();
+      $("login").classList.add("hidden");
+    };
+
+    render();
+  </script>
+</body>
+</html>

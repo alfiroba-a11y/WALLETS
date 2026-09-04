@@ -3,30 +3,45 @@ const fs = require("fs");
 const path = require("path");
 
 const port = process.env.PORT || 3000;
-const types = {
+
+const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
-  ".js": "application/javascript; charset=utf-8"
+  ".js": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon"
 };
 
-http.createServer((req, res) => {
-  const requested = req.url === "/" ? "index.html" : req.url.split("?")[0].replace(/^\/+/, "");
-  const file = path.resolve(__dirname, requested);
+const server = http.createServer((request, response) => {
+  const requestPath = request.url === "/"
+    ? "index.html"
+    : decodeURIComponent(request.url.split("?")[0]).replace(/^\/+/, "");
 
-  if (!file.startsWith(__dirname)) {
-    res.writeHead(403);
-    return res.end("Forbidden");
+  const filePath = path.resolve(__dirname, requestPath);
+
+  if (!filePath.startsWith(__dirname)) {
+    response.writeHead(403);
+    return response.end("Forbidden");
   }
 
-  fs.readFile(file, (error, data) => {
+  fs.readFile(filePath, (error, content) => {
     if (error) {
-      res.writeHead(404);
-      return res.end("Not found");
+      response.writeHead(error.code === "ENOENT" ? 404 : 500);
+      return response.end(error.code === "ENOENT" ? "Not found" : "Server error");
     }
 
-    res.writeHead(200, {
-      "Content-Type": types[path.extname(file)] || "application/octet-stream"
+    response.writeHead(200, {
+      "Content-Type": contentTypes[path.extname(filePath)] || "application/octet-stream"
     });
-    res.end(data);
+
+    response.end(content);
   });
-}).listen(port, () => console.log(`Running on port ${port}`));
+});
+
+server.listen(port, "0.0.0.0", () => {
+  console.log(`FlowSend is running on port ${port}`);
+});

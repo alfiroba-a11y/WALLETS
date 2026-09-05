@@ -2,7 +2,8 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const port = process.env.PORT || 3000;
+const port = Number(process.env.PORT) || 3000;
+const root = path.resolve(__dirname);
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -17,25 +18,39 @@ const contentTypes = {
 };
 
 const server = http.createServer((request, response) => {
-  const requestPath = request.url === "/"
-    ? "index.html"
-    : decodeURIComponent(request.url.split("?")[0]).replace(/^\/+/, "");
+  const rawPath = request.url === "/"
+    ? "/index.html"
+    : request.url.split("?")[0];
 
-  const filePath = path.resolve(__dirname, requestPath);
+  const relativePath = decodeURIComponent(rawPath).replace(/^[/\\]+/, "");
+  const filePath = path.resolve(root, relativePath);
 
-  if (!filePath.startsWith(__dirname)) {
-    response.writeHead(403);
+  const isOutsideProject =
+    !filePath.startsWith(root + path.sep) &&
+    filePath !== path.join(root, "index.html");
+
+  if (isOutsideProject) {
+    response.writeHead(403, {
+      "Content-Type": "text/plain; charset=utf-8"
+    });
+
     return response.end("Forbidden");
   }
 
   fs.readFile(filePath, (error, content) => {
     if (error) {
-      response.writeHead(error.code === "ENOENT" ? 404 : 500);
-      return response.end(error.code === "ENOENT" ? "Not found" : "Server error");
+      response.writeHead(error.code === "ENOENT" ? 404 : 500, {
+        "Content-Type": "text/plain; charset=utf-8"
+      });
+
+      return response.end(
+        error.code === "ENOENT" ? "Not found" : "Server error"
+      );
     }
 
     response.writeHead(200, {
-      "Content-Type": contentTypes[path.extname(filePath)] || "application/octet-stream"
+      "Content-Type": contentTypes[path.extname(filePath)] || "application/octet-stream",
+      "X-Content-Type-Options": "nosniff"
     });
 
     response.end(content);
@@ -43,5 +58,5 @@ const server = http.createServer((request, response) => {
 });
 
 server.listen(port, "0.0.0.0", () => {
-  console.log(`FlowSend is running on port ${port}`);
+  console.log(`FlowSend sandbox listening on port ${port}`);
 });

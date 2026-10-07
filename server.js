@@ -1,62 +1,14 @@
-const http = require("http");
-const fs = require("fs");
-const path = require("path");
-
-const port = Number(process.env.PORT) || 3000;
-const root = path.resolve(__dirname);
-
-const contentTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".js": "application/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".svg": "image/svg+xml",
-  ".ico": "image/x-icon"
-};
-
-const server = http.createServer((request, response) => {
-  const rawPath = request.url === "/"
-    ? "/index.html"
-    : request.url.split("?")[0];
-
-  const relativePath = decodeURIComponent(rawPath).replace(/^[/\\]+/, "");
-  const filePath = path.resolve(root, relativePath);
-
-  const isOutsideProject =
-    !filePath.startsWith(root + path.sep) &&
-    filePath !== path.join(root, "index.html");
-
-  if (isOutsideProject) {
-    response.writeHead(403, {
-      "Content-Type": "text/plain; charset=utf-8"
-    });
-
-    return response.end("Forbidden");
-  }
-
-  fs.readFile(filePath, (error, content) => {
-    if (error) {
-      response.writeHead(error.code === "ENOENT" ? 404 : 500, {
-        "Content-Type": "text/plain; charset=utf-8"
-      });
-
-      return response.end(
-        error.code === "ENOENT" ? "Not found" : "Server error"
-      );
-    }
-
-    response.writeHead(200, {
-      "Content-Type": contentTypes[path.extname(filePath)] || "application/octet-stream",
-      "X-Content-Type-Options": "nosniff"
-    });
-
-    response.end(content);
-  });
-});
-
-server.listen(port, "0.0.0.0", () => {
-  console.log(`FlowSend sandbox listening on port ${port}`);
-});
+const express=require('express'),mongoose=require('mongoose'),bcrypt=require('bcryptjs'),jwt=require('jsonwebtoken'),path=require('path'),crypto=require('crypto');
+const app=express(),PORT=process.env.PORT||3000,URI=process.env.MONGODB_URI,SECRET=process.env.JWT_SECRET;
+if(!URI||!SECRET)throw Error('Set MONGODB_URI and JWT_SECRET in Render environment variables.');
+const tx=new mongoose.Schema({id:String,type:String,market:String,side:String,amount:Number,price:Number,status:{type:String,default:'Filled'},createdAt:{type:Date,default:Date.now}},{_id:false});
+const userSchema=new mongoose.Schema({name:String,email:{type:String,unique:true},password:String,balance:{type:Number,default:100000},assets:{type:Object,default:{USDT:100000,BTC:0.5,ETH:8,SOL:120}},history:[tx],favorites:{type:[String],default:['BTC/USDT','ETH/USDT']},alerts:{type:[String],default:[]},dark:{type:Boolean,default:false},sessions:{type:[Object],default:[]},notices:{type:[String],default:['Welcome to Testnet Trading Lab. All data is simulated.']}});
+const User=mongoose.model('User',userSchema);app.use(express.json());app.use(express.static(__dirname));
+const safe=u=>({name:u.name,email:u.email,balance:u.balance,assets:u.assets,history:u.history,favorites:u.favorites,alerts:u.alerts,dark:u.dark,sessions:u.sessions,notices:u.notices});const token=u=>jwt.sign({id:u.id},SECRET,{expiresIn:'7d'});
+async function auth(req,res,next){try{let t=req.headers.authorization?.replace('Bearer ','');req.user=await User.findById(jwt.verify(t,SECRET).id);if(!req.user)throw 0;next()}catch{res.status(401).json({message:'Session expired. Please sign in.'})}}
+app.post('/api/register',async(req,res)=>{let {name,email,password}=req.body;if(!name||!email||!password||password.length<6)return res.status(400).json({message:'Use name, email and a 6+ character password.'});if(await User.findOne({email:email.toLowerCase()}))return res.status(409).json({message:'Account already exists.'});let u=await User.create({name,email:email.toLowerCase(),password:await bcrypt.hash(password,12),sessions:[{label:'Current browser',createdAt:new Date()}]});res.json({token:token(u),user:safe(u)})});
+app.post('/api/login',async(req,res)=>{let u=await User.findOne({email:req.body.email?.toLowerCase()});if(!u||!await bcrypt.compare(req.body.password||'',u.password))return res.status(401).json({message:'Incorrect email or password.'});u.sessions.unshift({label:'Current browser',createdAt:new Date()});await u.save();res.json({token:token(u),user:safe(u)})});
+app.get('/api/me',auth,(req,res)=>res.json(safe(req.user)));
+app.post('/api/order',auth,async(req,res)=>{let {market,side,amount,price,type='Market'}=req.body;amount=Number(amount);price=Number(price);if(!market||!['Buy','Sell'].includes(side)||!amount||amount<=0)return res.status(400).json({message:'Invalid test order.'});let cost=amount*price;if(side==='Buy'&&cost>req.user.assets.USDT)return res.status(400).json({message:'Insufficient test USDT.'});let asset=market.split('/')[0];if(side==='Buy'){req.user.assets.USDT-=cost;req.user.assets[asset]=(req.user.assets[asset]||0)+amount}else{if((req.user.assets[asset]||0)<amount)return res.status(400).json({message:`Insufficient test ${asset}.`});req.user.assets[asset]-=amount;req.user.assets.USDT+=cost}let o={id:'TN-'+crypto.randomBytes(4).toString('hex').toUpperCase(),type,market,side,amount,price,status:'Filled',createdAt:new Date()};req.user.history.unshift(o);req.user.notices.unshift(`${side} ${amount} ${asset} test order filled.`);await req.user.save();res.json({user:safe(req.user),order:o})});
+app.post('/api/preferences',auth,async(req,res)=>{Object.assign(req.user,{dark:!!req.body.dark,favorites:req.body.favorites||req.user.favorites,alerts:req.body.alerts||req.user.alerts});await req.user.save();res.json(safe(req.user))});
+app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'index.html')));mongoose.connect(URI).then(()=>app.listen(PORT,'0.0.0.0',()=>console.log('Testnet lab running')));

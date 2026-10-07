@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: flowsend-testnet
+    name: flowsend
     runtime: node
     buildCommand: npm install
     startCommand: npm start
